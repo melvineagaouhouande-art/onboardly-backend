@@ -8,16 +8,64 @@ use App\Http\Controllers\QueteController;
 use App\Http\Controllers\StagiaireQueteController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\StagiaireBadgeController;
+use App\Http\Controllers\AuthController;
 
-// Route pour la gestion des utilisateurs (RH, Managers, Admins)
-Route::apiResource('users', UserController::class);
+// ============================================================
+// ROUTES PUBLIQUES (Accessibles sans authentification)
+// ============================================================
+Route::post('register', [AuthController::class, 'register']);
+Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('login', [AuthController::class, 'login']);
 
-// Routes pour la gestion des stagiaires et du parcours
-Route::apiResource('stagiaires', StagiaireController::class);
-Route::apiResource('parcours', ParcoursController::class);
-Route::apiResource('quetes', QueteController::class);
-Route::apiResource('badges', BadgeController::class);
+// ============================================================
+// ROUTES PROTÉGÉES PAR AUTHENTIFICATION JWT
+// ============================================================
+Route::middleware('auth:api')->group(function () {
+    
+    // --- Profil & Session utilisateur ---
+    Route::post('logout', [AuthController::class, 'logout']);
+    Route::get('me', [AuthController::class, 'me']);
+    Route::post('refresh', [AuthController::class, 'refresh']);
 
-// Routes d'affectation et de suivi de progression
-Route::apiResource('stagiaire-quetes', StagiaireQueteController::class);
-Route::apiResource('stagiaire-badges', StagiaireBadgeController::class);
+    // --- Gestion RH & Administration (Réservé aux admin_rh) ---
+    Route::middleware('role:admin_rh')->group(function () {
+        // Validation des comptes utilisateurs (activer/suspendre)
+        Route::patch('users/{id}/statut', [AuthController::class, 'changerStatutCompte']);
+        
+        // CRUD complet pour les utilisateurs généraux
+        Route::apiResource('users', UserController::class);
+    });
+
+    // --- Gestion des Stagiaires (Admins et Managers) ---
+    Route::middleware('role:admin_rh,manager')->group(function () {
+        Route::apiResource('stagiaires', StagiaireController::class);
+        
+        // Modification des parcours et quêtes
+        Route::post('parcours', [ParcoursController::class, 'store']);
+        Route::put('parcours/{id}', [ParcoursController::class, 'update']);
+        Route::delete('parcours/{id}', [ParcoursController::class, 'destroy']);
+        
+        Route::post('quetes', [QueteController::class, 'store']);
+        Route::put('quetes/{id}', [QueteController::class, 'update']);
+        Route::delete('quetes/{id}', [QueteController::class, 'destroy']);
+
+        Route::post('badges', [BadgeController::class, 'store']);
+        Route::put('badges/{id}', [BadgeController::class, 'update']);
+        Route::delete('badges/{id}', [BadgeController::class, 'destroy']);
+    });
+
+    // --- Lecture autorisée à tous (Employés, Managers, RH) ---
+    Route::get('parcours', [ParcoursController::class, 'index']);
+    Route::get('parcours/{id}', [ParcoursController::class, 'show']);
+    
+    Route::get('quetes', [QueteController::class, 'index']);
+    Route::get('quetes/{id}', [QueteController::class, 'show']);
+    
+    Route::get('badges', [BadgeController::class, 'index']);
+    Route::get('badges/{id}', [BadgeController::class, 'show']);
+
+    // --- Suivi des Quêtes et Progression des Stagiaires ---
+    // Les stagiaires peuvent voir et mettre à jour leur avancement
+    Route::apiResource('stagiaire-quetes', StagiaireQueteController::class);
+    Route::apiResource('stagiaire-badges', StagiaireBadgeController::class);
+});
