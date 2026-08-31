@@ -8,6 +8,7 @@ use App\Http\Controllers\QueteController;
 use App\Http\Controllers\StagiaireQueteController;
 use App\Http\Controllers\BadgeController;
 use App\Http\Controllers\StagiaireBadgeController;
+use App\Http\Controllers\DepartementController;
 use App\Http\Controllers\AuthController;
 
 // ============================================================
@@ -16,6 +17,7 @@ use App\Http\Controllers\AuthController;
 Route::post('register', [AuthController::class, 'register']);
 Route::post('verify-otp', [AuthController::class, 'verifyOtp']);
 Route::post('login', [AuthController::class, 'login']);
+Route::get('departements', [DepartementController::class, 'index']);
 
 // ============================================================
 // ROUTES PROTÉGÉES PAR AUTHENTIFICATION JWT
